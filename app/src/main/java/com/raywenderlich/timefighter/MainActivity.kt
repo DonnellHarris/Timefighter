@@ -6,8 +6,11 @@ import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import android.util.Log
 
 class MainActivity : AppCompatActivity() {
+
+  private val TAG = MainActivity::class.java.simpleName
 
   private var score = 0
 
@@ -24,6 +27,9 @@ class MainActivity : AppCompatActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.activity_main)
+
+    Log.d(TAG, "onCreate called. Score is: $score")
+
     // connect views to variables
     //1
     gameScoreTextView = findViewById(R.id.game_score_text_view)
@@ -32,9 +38,31 @@ class MainActivity : AppCompatActivity() {
     //2
     tapMeButton.setOnClickListener { incrementScore() }
 
-    resetGame()
+    if (savedInstanceState != null) {
+      score = savedInstanceState.getInt(SCORE_KEY)
+      timeLeft = savedInstanceState.getInt(TIME_LEFT_KEY)
+      restoreGame()
+    } else {
+      resetGame()
+    }
   }
 
+  override fun onSaveInstanceState(outState: Bundle) {
+
+    super.onSaveInstanceState(outState)
+
+    outState.putInt(SCORE_KEY, score)
+    outState.putInt(TIME_LEFT_KEY, timeLeft)
+    countDownTimer.cancel()
+
+    Log.d(TAG, "onSaveInstanceState: Saving Score: $score & Time Left: $timeLeft")
+  }
+
+  override fun onDestroy() {
+    super.onDestroy()
+
+    Log.d(TAG, "onDestroy called.")
+  }
   private fun incrementScore() {
 
     if (!gameStarted) {
@@ -74,6 +102,33 @@ class MainActivity : AppCompatActivity() {
     // 4
     gameStarted = false
   }
+
+  private fun restoreGame() {
+
+    val restoredScore = getString(R.string.your_score, score)
+    gameScoreTextView.text = restoredScore
+
+    val restoredTime = getString(R.string.time_left, timeLeft)
+    timeLeftTextView.text = restoredTime
+
+    countDownTimer = object : CountDownTimer((timeLeft * 1000).toLong(), countDownInterval) {
+      override fun onTick(millisUntilFinished: Long) {
+
+        timeLeft = millisUntilFinished.toInt() / 1000
+
+        val timeLeftString = getString(R.string.time_left, timeLeft)
+        timeLeftTextView.text = timeLeftString
+      }
+
+      override fun onFinish() {
+        endGame()
+      }
+    }
+
+    countDownTimer.start()
+    gameStarted = true
+  }
+
   private fun startGame() {
     countDownTimer.start()
     gameStarted = true
@@ -83,4 +138,8 @@ class MainActivity : AppCompatActivity() {
     resetGame()
   }
 
+  companion object {
+    private const val SCORE_KEY = "SCORE_KEY"
+    private const val TIME_LEFT_KEY = "TIME_LEFT_KEY"
+  }
 }
